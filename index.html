@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- ── Primary SEO ── -->
+  <title>BingoPick – Free Online Bingo Caller & Game | Custom Prizes</title>
+  <meta name="description" content="Free online bingo game and number caller. Use custom words and prizes for CNY, Christmas, office parties, and team events. No download, no login required." />
+  <meta name="keywords" content="bingo caller, online bingo, bingo game, CNY bingo, office party bingo, custom bingo, free bingo caller, prize bingo, virtual bingo" />
+  <meta name="author" content="BingoPick" />
+  <link rel="canonical" href="https://bingo-pick.com/" />
+
+  <!-- ── Open Graph ── -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://bingo-pick.com/" />
+  <meta property="og:title" content="BingoPick – Free Online Bingo Caller & Game" />
+  <meta property="og:description" content="Host a fun bingo game for any event. Custom prizes, CNY themes, and instant win detection. Free & no login required." />
+  <meta property="og:site_name" content="BingoPick" />
+
+  <!-- ── Twitter Card ── -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="BingoPick – Free Online Bingo Caller" />
+  <meta name="twitter:description" content="Host bingo for CNY, Christmas, office parties. Custom prizes & themes. Free, instant, no login." />
+
+  <!-- ── JSON-LD ── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "BingoPick – Online Bingo Caller",
+    "url": "https://bingo-pick.com/",
+    "description": "Free online bingo game and number caller with custom prizes for any event.",
+    "applicationCategory": "GameApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
+
+  <!-- ── Google AdSense ── -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+
+  <!-- ── Fonts ── -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Confetti canvas -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- ══════════════════════════════ HEADER ══════════════════════════════ -->
+  <header class="header">
+    <div class="logo">
+      <span class="logo-icon" id="logo-icon">🎱</span>
+      <span class="logo-text">BingoPick</span>
+    </div>
+
+    <div class="theme-picker">
+      <select id="sel-region"   class="theme-select" title="Region"></select>
+      <select id="sel-festival" class="theme-select" title="Festival / Theme"></select>
+    </div>
+
+    <div class="header-actions">
+      <!-- Before room created -->
+      <button id="btn-create-room" class="btn-create-room" title="Create a multiplayer room">
+        🚪 Create Room
+      </button>
+      <!-- After room created: host badge (hidden initially) -->
+      <button id="btn-room-badge" class="btn-room-badge hidden" title="Open room lobby">
+        <span class="host-dot"></span>
+        <span>Host</span>
+        <span class="host-room-id" id="host-room-id">–</span>
+        <span class="host-player-count" id="host-player-count">0 players</span>
+      </button>
+      <button id="btn-share" class="btn-icon" title="Share this game">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Share
+      </button>
+      <div id="share-toast" class="share-toast">Link copied! 🎉</div>
+    </div>
+  </header>
+
+  <!-- ── Ad: Leaderboard ── -->
+  <div class="ad-leaderboard">
+    <ins class="adsbygoogle" style="display:block"
+         data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+         data-ad-slot="1111111111"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  </div>
+
+  <!-- ══════════════════════════════ MAIN ══════════════════════════════ -->
+  <main class="app">
+
+    <!-- ── LEFT: Called Numbers ── -->
+    <aside class="called-panel">
+      <div class="panel-header-row">
+        <h2 class="panel-title">Called</h2>
+        <span class="called-count-badge" id="called-count-badge">0 / 75</span>
+      </div>
+
+      <!-- BINGO column headers -->
+      <div class="bingo-col-headers">
+        <span class="col-header col-b">B</span>
+        <span class="col-header col-i">I</span>
+        <span class="col-header col-n">N</span>
+        <span class="col-header col-g">G</span>
+        <span class="col-header col-o">O</span>
+      </div>
+
+      <!-- Number grid 1–75 -->
+      <div class="number-grid" id="number-grid">
+        <!-- populated by JS -->
+      </div>
+
+      <!-- Last called ball display -->
+      <div class="last-ball-wrap">
+        <div class="last-ball" id="last-ball">
+          <span class="last-ball-col" id="last-ball-col">–</span>
+          <span class="last-ball-num" id="last-ball-num">–</span>
+        </div>
+        <p class="last-ball-label">Last Called</p>
+      </div>
+    </aside>
+
+    <!-- ── CENTER: Bingo Card ── -->
+    <section class="card-section">
+      <!-- Mode tabs -->
+      <div class="mode-tabs" id="mode-tabs">
+        <button class="mode-tab active" id="tab-numbers" data-mode="numbers">🎱 Numbers</button>
+        <button class="mode-tab" id="tab-words" data-mode="words">🎁 Custom Prizes</button>
+      </div>
+
+      <!-- Custom prizes input (hidden by default) -->
+      <div id="custom-prizes-panel" class="custom-prizes-panel hidden">
+        <textarea id="prizes-textarea" class="prizes-textarea"
+          placeholder="Enter prizes, one per line…&#10;Example:&#10;🧧 Red Packet $10&#10;🧧 Red Packet $20&#10;🍊 Mandarin Orange Hamper&#10;💰 Cash $100&#10;🎊 Grand Prize" rows="6"></textarea>
+        <div class="custom-prizes-actions">
+          <button id="btn-load-prizes" class="btn-primary btn-small">Load Prizes</button>
+          <button id="btn-load-default-prizes" class="btn-text btn-small">Use CNY defaults</button>
+        </div>
+        <p class="prizes-hint" id="prizes-hint">0 prizes loaded</p>
+      </div>
+
+      <!-- The 5×5 bingo card -->
+      <div class="bingo-card-wrap">
+        <div class="bingo-card-header">
+          <span class="bc-col bc-b">B</span>
+          <span class="bc-col bc-i">I</span>
+          <span class="bc-col bc-n">N</span>
+          <span class="bc-col bc-g">G</span>
+          <span class="bc-col bc-o">O</span>
+        </div>
+        <div class="bingo-card" id="bingo-card">
+          <!-- 25 cells injected by JS -->
+        </div>
+      </div>
+
+      <!-- Card controls -->
+      <div class="card-controls">
+        <button id="btn-new-card" class="btn-secondary">🔀 New Card</button>
+        <label class="toggle-label">
+          <input type="checkbox" id="chk-auto-mark" checked />
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          Auto-mark
+        </label>
+      </div>
+    </section>
+
+    <!-- ── RIGHT: Game Controls ── -->
+    <aside class="controls-panel">
+
+      <!-- Game status -->
+      <div class="game-status-card" id="game-status-card">
+        <div class="status-dot" id="status-dot"></div>
+        <span class="status-text" id="status-text">Ready to play</span>
+      </div>
+
+      <!-- Draw button -->
+      <button id="btn-draw" class="btn-draw">
+        <span class="draw-icon">🎱</span>
+        <span class="draw-label" id="draw-label">Draw Ball</span>
+      </button>
+
+      <!-- Pause / Resume -->
+      <button id="btn-pause" class="btn-pause" disabled>⏸ Pause</button>
+
+      <!-- Auto-caller -->
+      <div class="autocaller-section">
+        <div class="autocaller-header">
+          <span class="section-label">Auto Caller</span>
+          <label class="toggle-label toggle-small">
+            <input type="checkbox" id="chk-autocall" />
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+        </div>
+        <div class="speed-row">
+          <span class="speed-label">Speed</span>
+          <input type="range" id="speed-slider" class="speed-slider" min="1" max="5" value="3" />
+          <span class="speed-val" id="speed-val">Normal</span>
+        </div>
+      </div>
+
+      <!-- Win patterns -->
+      <div class="patterns-section">
+        <span class="section-label">Win Pattern</span>
+        <div class="pattern-grid">
+          <label class="pattern-opt active" id="pat-line" title="Any line (row, col, diagonal)">
+            <input type="radio" name="pattern" value="line" checked />
+            <div class="pattern-icon">
+              <div class="pi-row"><div class="pi-cell filled"></div><div class="pi-cell filled"></div><div class="pi-cell filled"></div><div class="pi-cell filled"></div><div class="pi-cell filled"></div></div>
+              <div class="pi-row"><div class="pi-cell"></div><div class="pi-cell"></div><div class="pi-cell"></div><div class="pi-cell"></div><div class="pi-cell"></div></div>
+              <div class="pi-row"><div class="pi-cell"></div><div class="pi-cell"></div><div class="pi-cell"></div><div class="pi-cell"></div><div class="pi-cell"></div></div>
+            </div>
+            <span>Any Line</span>
+          </label>
+          <label class="pattern-opt" id="pat-x" title="X pattern (both diagonals)">
+            <input type="radio" name="pattern" value="x" />
+            <div class="pattern-icon">
+              <div class="pi-row"><div class="pi-cell filled"></div><div class="pi-cell"></div><div class="pi-cell"></div><div class="pi-cell"></div><div class="pi-cell filled"></div></div>
+              <div class="pi-row"><div class="pi-cell"></div><div class="pi-cell filled"></div><div class="pi-cell"></div><div class="pi-cell filled"></div><div class="pi-cell"></div></div>
+              <div class="pi-row"><div class="pi-cell"></div><div class="pi-cell"></div><div class="pi-cell filled"></div><div class="pi-cell"></div><div class="pi-cell"></div></div>
+            </div>
+            <span>X Pattern</span>
+          </label>
+          <label class="pattern-opt" id="pat-frame" title="Frame (outer ring)">
+            <input type="radio" name="pattern" value="frame" />
+            <div class="pattern-icon">
+              <div class="pi-row"><div class="pi-cell filled"></div><div class="pi-cell filled"></div><div class="pi-cell filled"></div><div class="pi-cell filled"></div><div class="pi-cell filled"></div></div>
+              <div class="pi-row"><div class="pi-cell filled"></div><div class="pi-cell"></div><div class="pi-cell"></div><div class="pi-cell"></div><div class="pi-cell filled"></div></div>
+              <div class="pi-row"><div class="pi-cell filled"></div><div class="pi-cell"></div><div class="pi-cell"></div><div class="pi-cell"></div><div class="pi-cell filled"></div></div>
+            </div>
+            <span>Frame</span>
+          </label>
+          <label class="pattern-opt" id="pat-blackout" title="Full house - all cells">
+            <input type="radio" name="pattern" value="blackout" />
+            <div class="pattern-icon">
+              <div class="pi-row"><div class="pi-cell filled"></div><div class="pi-cell filled"></div><div class="pi-cell filled"></div><div class="pi-cell filled"></div><div class="pi-cell filled"></div></div>
+              <div class="pi-row"><div class="pi-cell filled"></div><div class="pi-cell filled"></div><div class="pi-cell filled"></div><div class="pi-cell filled"></div><div class="pi-cell filled"></div></div>
+              <div class="pi-row"><div class="pi-cell filled"></div><div class="pi-cell filled"></div><div class="pi-cell filled"></div><div class="pi-cell filled"></div><div class="pi-cell filled"></div></div>
+            </div>
+            <span>Full House</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Players section -->
+      <div class="players-section">
+        <div class="players-header">
+          <span class="section-label">Players</span>
+          <span class="player-count" id="player-count">0</span>
+        </div>
+        <div class="add-player-row">
+          <input type="text" id="input-player" class="input-player" placeholder="Add player name…" maxlength="30" autocomplete="off" />
+          <button id="btn-add-player" class="btn-add-player" title="Add player">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+        <ul class="player-list" id="player-list"></ul>
+        <div class="empty-players" id="empty-players">
+          <span>🙋 Add players to track their cards</span>
+        </div>
+      </div>
+
+      <!-- Sound toggle -->
+      <div class="sound-row">
+        <label class="toggle-label">
+          <input type="checkbox" id="chk-sound" checked />
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          Sound effects
+        </label>
+      </div>
+
+
+      <!-- Reset -->
+      <button id="btn-reset" class="btn-reset">↺ New Game</button>
+
+      <!-- Ad slot -->
+      <div class="ad-rectangle">
+        <ins class="adsbygoogle" style="display:block"
+             data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+             data-ad-slot="2222222222"
+             data-ad-format="rectangle"
+             data-full-width-responsive="true"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ══════════════════════════════ BINGO MODAL ══════════════════════════════ -->
+  <div id="bingo-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-emoji" id="modal-emoji">🎊</div>
+      <p class="modal-subtitle">We have a winner!</p>
+      <h2 class="modal-winner" id="modal-winner-name">BINGO!</h2>
+      <p class="modal-prize" id="modal-prize"></p>
+      <div class="modal-actions">
+        <button id="btn-continue" class="btn-primary">Continue Game</button>
+        <button id="btn-close-modal" class="btn-text">Dismiss</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════ PLAYER CARD MODAL ══════════════════════════════ -->
+  <div id="player-card-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-card-wide">
+      <div class="player-modal-header">
+        <h3 class="player-modal-name" id="player-modal-name">Player Card</h3>
+        <button id="btn-close-player-modal" class="btn-text">✕</button>
+      </div>
+      <div class="bingo-card-header">
+        <span class="bc-col bc-b">B</span>
+        <span class="bc-col bc-i">I</span>
+        <span class="bc-col bc-n">N</span>
+        <span class="bc-col bc-g">G</span>
+        <span class="bc-col bc-o">O</span>
+      </div>
+      <div class="bingo-card" id="player-card-grid"></div>
+      <button id="btn-call-bingo" class="btn-primary" style="width:100%;margin-top:1rem">🎊 BINGO!</button>
+    </div>
+  </div>
+
+  <!-- ══ ROOM LOBBY MODAL ══════════════════════════════════════ -->
+  <div id="room-modal" class="modal-overlay hidden">
+    <div class="modal-card room-modal-card">
+      <!-- Header -->
+      <div class="room-modal-header">
+        <div class="room-modal-title">
+          <span class="host-dot"></span>
+          <span>Room Lobby</span>
+          <span class="room-id-chip" id="room-id-display">–</span>
+        </div>
+        <button id="btn-close-room-modal" class="btn-text">✕</button>
+      </div>
+
+      <!-- Share link -->
+      <div class="room-modal-section">
+        <div class="room-modal-label">Invite link – share with players 👇</div>
+        <div class="room-link-row">
+          <span class="room-link-text" id="room-link">–</span>
+          <button id="btn-copy-link" class="btn-copy-link" title="Copy link">📋 Copy</button>
+        </div>
+        <div id="copy-link-toast" class="copy-toast">✅ Copied!</div>
+      </div>
+
+      <!-- Player list -->
+      <div class="room-modal-section">
+        <div class="room-modal-label">
+          Players
+          <span class="player-count" id="room-player-count">0</span>
+        </div>
+        <ul class="room-player-list" id="room-player-list">
+          <li class="room-empty-hint">No players yet. Share the link above.</li>
+        </ul>
+      </div>
+
+      <!-- Hint + Start -->
+      <p class="room-hint">🔒 = locked in and ready &nbsp;·&nbsp; ⏳ = still setting up</p>
+      <button id="btn-start-game" class="btn-start-game" disabled>▶ Start Game</button>
+    </div>
+  </div>
+
+  <script src="themes.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

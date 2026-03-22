@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BingoPick – Player Card</title>
+  <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ── Player-specific overrides ── */
+    body { background: var(--bg); }
+
+    .player-app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 1rem 1rem 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      min-height: 100vh;
+    }
+
+    /* Name entry screen */
+    .name-screen {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 1.5rem;
+      min-height: 80vh; text-align: center;
+    }
+    .name-screen-emoji { font-size: 3.5rem; }
+    .name-screen h1 { font-size: 1.5rem; font-weight: 800; }
+    .name-screen p  { color: var(--text-muted); font-size: 0.9rem; }
+    .name-input-row { display: flex; gap: 0.5rem; width: 100%; max-width: 320px; }
+    .name-input-big {
+      flex: 1; background: var(--bg-card2); border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text); font-family: var(--font);
+      font-size: 1rem; font-weight: 600; padding: 0.7rem 1rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .name-input-big:focus { border-color: var(--accent); }
+    .name-input-big::placeholder { color: var(--text-muted); font-weight: 400; }
+
+    /* Phase header */
+    .phase-bar {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 0.75rem 1rem;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .phase-label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; }
+    .phase-status { font-size: 0.85rem; font-weight: 600; }
+    .phase-status.waiting  { color: var(--text-muted); }
+    .phase-status.setup    { color: var(--accent); }
+    .phase-status.active   { color: var(--success); }
+    .phase-status.locked   { color: #fbbf24; }
+
+    /* Editable card (setup phase) */
+    .bingo-cell.editable {
+      cursor: text;
+      font-size: 0.85rem;
+    }
+    .bingo-cell.editable:focus-within,
+    .bingo-cell.editable:hover:not(.free) {
+      border-color: var(--accent);
+      background: rgba(124,106,255,0.08);
+    }
+    .bingo-cell.editable.filled {
+      border-color: rgba(124,106,255,0.3);
+    }
+    .bingo-cell.editable.error {
+      border-color: var(--danger)!important;
+      background: rgba(244,63,94,0.08)!important;
+    }
+    .cell-input {
+      width: 100%; height: 100%;
+      background: transparent; border: none; outline: none;
+      color: var(--text); font-family: var(--font);
+      font-size: 0.85rem; font-weight: 700;
+      text-align: center; cursor: text;
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    .cell-input::-webkit-inner-spin-button,
+    .cell-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    /* Setup action bar */
+    .setup-actions {
+      display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;
+    }
+    .btn-randomize {
+      flex: 1; padding: 0.65rem 1rem;
+      background: var(--bg-card2); border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text); font-family: var(--font);
+      font-size: 0.9rem; font-weight: 700; cursor: pointer;
+      transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    }
+    .btn-randomize:hover { border-color: var(--accent); background: rgba(124,106,255,0.08); color: var(--accent); }
+    .btn-lock-in {
+      flex: 1.5; padding: 0.65rem 1rem;
+      background: linear-gradient(135deg, var(--ball-a), var(--ball-b));
+      border: none; border-radius: var(--radius-sm); color: #fff;
+      font-family: var(--font); font-size: 0.9rem; font-weight: 800;
+      cursor: pointer; transition: all 0.2s;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+    .btn-lock-in:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+    .btn-lock-in:disabled { background: var(--bg-card2); color: var(--text-muted); cursor: not-allowed; box-shadow: none; transform: none; }
+
+    .lock-notice {
+      text-align: center; color: #fbbf24; font-size: 0.82rem; font-weight: 600;
+      padding: 0.5rem; background: rgba(251,191,36,0.08);
+      border: 1px solid rgba(251,191,36,0.25); border-radius: var(--radius-sm);
+    }
+
+    /* Waiting banner */
+    .waiting-banner {
+      text-align: center; padding: 1.5rem;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .waiting-banner .pulse-emoji { font-size: 2rem; animation: heartbeat 1.5s ease-in-out infinite; }
+    @keyframes heartbeat { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+    .waiting-banner p { color: var(--text-muted); font-size: 0.88rem; margin-top: 0.5rem; }
+    .waiting-banner strong { color: var(--text); }
+
+    /* BINGO button (game phase) */
+    .btn-shout-bingo {
+      width: 100%; padding: 1.1rem;
+      background: linear-gradient(135deg, #ffd166, #ef4444);
+      border: none; border-radius: var(--radius);
+      color: #fff; font-family: var(--font); font-weight: 900;
+      font-size: 1.4rem; letter-spacing: 0.1em;
+      cursor: pointer; transition: all 0.2s;
+      box-shadow: 0 4px 24px rgba(239,68,68,0.4);
+      animation: bingo-pulse 2s ease-in-out infinite;
+    }
+    .btn-shout-bingo:hover { transform: scale(1.02); box-shadow: 0 8px 32px rgba(239,68,68,0.5); }
+    @keyframes bingo-pulse {
+      0%,100%{ box-shadow: 0 4px 24px rgba(239,68,68,0.4); }
+      50%    { box-shadow: 0 4px 36px rgba(239,68,68,0.7); }
+    }
+
+    /* Called strip (game phase) */
+    .called-strip-wrap { display: flex; flex-direction: column; gap: 0.5rem; }
+    .called-strip-label { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; }
+    .called-strip {
+      display: flex; flex-wrap: wrap; gap: 4px;
+    }
+    .strip-ball {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; font-weight: 800; color: #fff;
+      animation: pop-in 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .strip-ball[data-col="B"] { background: var(--col-b); }
+    .strip-ball[data-col="I"] { background: var(--col-i); }
+    .strip-ball[data-col="N"] { background: var(--col-n); }
+    .strip-ball[data-col="G"] { background: var(--col-g); }
+    .strip-ball[data-col="O"] { background: var(--col-o); }
+
+    /* Last called big ball */
+    .last-ball-player {
+      display: flex; align-items: center; gap: 1rem;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 0.75rem 1rem;
+    }
+    .big-ball {
+      width: 60px; height: 60px; border-radius: 50%; flex-shrink: 0;
+      background: radial-gradient(135deg, var(--ball-a), var(--ball-b));
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .big-ball::before {
+      content:''; position:absolute; top:6px; left:10px;
+      width:14px; height:8px; background:rgba(255,255,255,0.25);
+      border-radius:50%; transform:rotate(-30deg);
+    }
+    .big-ball-col { font-size: 0.62rem; font-weight: 900; color: rgba(255,255,255,0.8); line-height:1; }
+    .big-ball-num { font-size: 1.2rem; font-weight: 900; color: #fff; line-height:1; }
+    .last-ball-info { flex:1; }
+    .last-ball-info .lbl { font-size: 0.7rem; color: var(--text-muted); font-weight:600; text-transform:uppercase; }
+    .last-ball-info .val { font-size: 1rem; font-weight: 800; margin-top: 0.1rem; }
+    .last-ball-info .count-lbl { font-size: 0.72rem; color: var(--text-muted); }
+
+    .player-header {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 1rem 0 0.25rem;
+    }
+    .player-logo { font-size: 1.4rem; font-weight:900; display:flex; align-items:center; gap:0.4rem; }
+    .player-room-badge {
+      font-size: 0.72rem; font-weight: 700;
+      background: var(--bg-card2); border: 1px solid var(--border);
+      border-radius: 999px; padding: 0.15rem 0.6rem;
+      color: var(--text-muted); margin-left: auto;
+    }
+
+    .validation-error {
+      color: var(--danger); font-size: 0.78rem; font-weight: 600;
+      padding: 0.4rem 0.5rem; background: rgba(244,63,94,0.08);
+      border-radius: var(--radius-sm); border: 1px solid rgba(244,63,94,0.2);
+    }
+  </style>
+</head>
+<body>
+<canvas id="confetti-canvas"></canvas>
+
+<!-- ══ JOIN SCREEN (shown first) ══════════════════════════════ -->
+<div id="join-screen" class="name-screen">
+  <div class="name-screen-emoji">🎱</div>
+  <h1>Join Bingo Game</h1>
+  <p id="room-id-label">Room: <strong id="join-room-id">–</strong></p>
+  <p id="join-subtitle">Enter your name to get your bingo card</p>
+  <div class="name-input-row">
+    <input type="text" id="input-player-name" class="name-input-big" placeholder="Your name…" maxlength="24" autocomplete="off" />
+    <button id="btn-join" class="btn-primary" style="white-space:nowrap">Join →</button>
+  </div>
+  <p id="join-error" class="validation-error hidden"></p>
+</div>
+
+<!-- ══ PLAYER APP (shown after joining) ════════════════════════ -->
+<div id="player-app" class="player-app hidden">
+
+  <!-- Header -->
+  <div class="player-header">
+    <div class="player-logo">🎱 BingoPick</div>
+    <div class="player-room-badge" id="player-room-badge">Room –</div>
+  </div>
+
+  <!-- Phase status bar -->
+  <div class="phase-bar">
+    <span class="phase-label" id="phase-label">Setup</span>
+    <span class="phase-status" id="phase-status-text">Fill in your card</span>
+  </div>
+
+  <!-- BINGO card header -->
+  <div class="bingo-card-header">
+    <span class="bc-col bc-b">B</span>
+    <span class="bc-col bc-i">I</span>
+    <span class="bc-col bc-n">N</span>
+    <span class="bc-col bc-g">G</span>
+    <span class="bc-col bc-o">O</span>
+  </div>
+
+  <!-- The card (editable in setup, read-only in game) -->
+  <div class="bingo-card" id="player-bingo-card"></div>
+
+  <!-- Setup phase controls -->
+  <div id="setup-controls">
+    <div class="setup-actions">
+      <button id="btn-randomize" class="btn-randomize">🔀 All Random</button>
+      <button id="btn-fill-empty" class="btn-randomize" style="flex:1">✨ Fill Empty</button>
+      <button id="btn-lock-in" class="btn-lock-in">🔒 Lock In</button>
+    </div>
+    <p id="setup-error" class="validation-error hidden" style="margin-top:0.4rem"></p>
+  </div>
+
+  <!-- Lock notice (shown after locking) -->
+  <div id="locked-notice" class="lock-notice hidden">
+    🔒 Your card is locked! Waiting for the host to start the game…
+  </div>
+
+  <!-- Waiting banner (locked, not started yet) -->
+  <div id="waiting-banner" class="waiting-banner hidden">
+    <div class="pulse-emoji">⏳</div>
+    <p>Waiting for <strong>host to start</strong> the game.</p>
+    <p style="margin-top:0.25rem;font-size:0.78rem">All players must lock in first.</p>
+  </div>
+
+  <!-- ══  GAME PHASE (hidden until game starts) ══ -->
+  <div id="game-phase" class="hidden">
+
+    <!-- Last called ball -->
+    <div class="last-ball-player">
+      <div class="big-ball" id="big-ball">
+        <span class="big-ball-col" id="big-ball-col">–</span>
+        <span class="big-ball-num" id="big-ball-num">–</span>
+      </div>
+      <div class="last-ball-info">
+        <div class="lbl">Last Called</div>
+        <div class="val" id="big-ball-label">–</div>
+        <div class="count-lbl" id="called-progress">0 called</div>
+      </div>
+    </div>
+
+    <!-- BINGO! button -->
+    <button id="btn-shout-bingo" class="btn-shout-bingo">🎊 BINGO!</button>
+
+    <!-- Called numbers strip -->
+    <div class="called-strip-wrap">
+      <div class="called-strip-label">Called Numbers</div>
+      <div class="called-strip" id="called-strip"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ══ WIN MODAL ══════════════════════════════════════════════ -->
+<div id="player-win-modal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div class="modal-emoji">🎊</div>
+    <p class="modal-subtitle">You called it!</p>
+    <h2 class="modal-winner">BINGO!</h2>
+    <p class="modal-prize" id="player-win-prize"></p>
+    <div class="modal-actions">
+      <button id="btn-dismiss-win" class="btn-primary">Awesome! 🎉</button>
+    </div>
+  </div>
+</div>
+
+<script src="themes.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+/* ════════════════════════════════════════════════════════════════
+   play.js – Player view logic
+════════════════════════════════════════════════════════════════ */
+'use strict';
+
+const BINGO_COLS  = ['B','I','N','G','O'];
+const COL_RANGES  = { B:[1,15], I:[16,30], N:[31,45], G:[46,60], O:[61,75] };
+const AVATAR_COLORS=['#6366f1','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899','#06b6d4','#f97316'];
+
+/* ── State ── */
+let pState = {
+  roomId: null,
+  playerId: null,
+  playerName: null,
+  card: [],         // 25 cells {label, col, num}
+  marked: new Set([12]),
+  locked: false,
+  gameActive: false,
+  called: [],       // items called by host
+  mode: 'numbers',
+  pool: [],
+  pattern: 'line',
+  db: null,
+  broadcastCh: null,
+  currentTheme: null,
+};
+
+/* ── DOM ── */
+const $p = id => document.getElementById(id);
+const PDOM = {
+  joinScreen:    $p('join-screen'),
+  playerApp:     $p('player-app'),
+  joinRoomId:    $p('join-room-id'),
+  inputName:     $p('input-player-name'),
+  btnJoin:       $p('btn-join'),
+  joinError:     $p('join-error'),
+  playerRoomBadge:$p('player-room-badge'),
+  phaseLabel:    $p('phase-label'),
+  phaseStatus:   $p('phase-status-text'),
+  card:          $p('player-bingo-card'),
+  btnRandomize:  $p('btn-randomize'),
+  btnLockIn:     $p('btn-lock-in'),
+  setupControls: $p('setup-controls'),
+  setupError:    $p('setup-error'),
+  lockedNotice:  $p('locked-notice'),
+  waitingBanner: $p('waiting-banner'),
+  gamePhase:     $p('game-phase'),
+  bigBall:       $p('big-ball'),
+  bigBallCol:    $p('big-ball-col'),
+  bigBallNum:    $p('big-ball-num'),
+  bigBallLabel:  $p('big-ball-label'),
+  calledProgress:$p('called-progress'),
+  calledStrip:   $p('called-strip'),
+  btnShoutBingo: $p('btn-shout-bingo'),
+  winModal:      $p('player-win-modal'),
+  winPrize:      $p('player-win-prize'),
+  btnDismissWin: $p('btn-dismiss-win'),
+  confetti:      $p('confetti-canvas'),
+};
+
+/* ── Confetti ── */
+(function(){
+  const canvas=PDOM.confetti, ctx=canvas.getContext('2d'); let parts=[],raf;
+  function resize(){canvas.width=innerWidth;canvas.height=innerHeight;} window.addEventListener('resize',resize);resize();
+  const COLS=['#7c6aff','#ff5e87','#00d2ff','#ffd166','#06d6a0','#ff9f1c'];
+  window.launchConfetti=function(theme){
+    const cols=(theme&&theme.ballColors)?theme.ballColors:COLS; parts=[];
+    for(let i=0;i<140;i++) parts.push({x:Math.random()*canvas.width,y:-10,r:Math.random()*7+3,dx:(Math.random()-.5)*4,dy:Math.random()*4+2,rot:Math.random()*Math.PI*2,drot:(Math.random()-.5)*.15,color:cols[Math.floor(Math.random()*cols.length)],shape:Math.random()>.5?'rect':'circle',alpha:1});
+    if(raf)cancelAnimationFrame(raf);animate();
+  };
+  function animate(){ctx.clearRect(0,0,canvas.width,canvas.height);parts=parts.filter(p=>p.alpha>0.02);parts.forEach(p=>{ctx.save();ctx.globalAlpha=p.alpha;ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillStyle=p.color;if(p.shape==='circle'){ctx.beginPath();ctx.arc(0,0,p.r,0,Math.PI*2);ctx.fill();}else ctx.fillRect(-p.r,-p.r/2,p.r*2,p.r);ctx.restore();p.x+=p.dx;p.y+=p.dy;p.rot+=p.drot;p.dy+=0.06;if(p.y>canvas.height*.75)p.alpha-=0.02;});if(parts.length>0)raf=requestAnimationFrame(animate);}
+})();
+
+/* ── Helpers ── */
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function genId(n=10){const c='abcdefghijklmnopqrstuvwxyz0123456789';return Array.from({length:n},()=>c[Math.floor(Math.random()*c.length)]).join('');}
+
+/* ── Session persistence (localStorage) ── */
+function sessionKey(){ return `bingo_p_${pState.roomId}`; }
+function saveSession(){
+  if(!pState.roomId||!pState.playerName) return;
+  try{
+    localStorage.setItem(sessionKey(), JSON.stringify({
+      v:2, playerId:pState.playerId, playerName:pState.playerName,
+      card:pState.card, locked:pState.locked,
+      marked:[...pState.marked], called:pState.called,
+      gameActive:pState.gameActive, ts:Date.now()
+    }));
+  }catch(e){}
+}
+function clearSession(){ try{ if(pState.roomId) localStorage.removeItem(sessionKey()); }catch(e){} }
+
+/* ── Read room param ── */
+function getRoomId(){
+  const p=new URLSearchParams(window.location.search);
+  return p.get('room')||null;
+}
+
+/* ── Card generation ── */
+function generateCard(pool, mode){
+  if(mode==='numbers'||!mode){
+    const card=[];
+    BINGO_COLS.forEach(col=>{const[lo,hi]=COL_RANGES[col];card.push(shuffle(Array.from({length:hi-lo+1},(_,i)=>lo+i)).slice(0,5));});
+    const grid=[];
+    for(let r=0;r<5;r++) for(let c=0;c<5;c++) grid.push({label:String(card[c][r]),col:BINGO_COLS[c],num:card[c][r]});
+    grid[12]={label:'FREE',col:'FREE',num:-1}; return grid;
+  } else {
+    let src=[...pool]; while(src.length<24)src=[...src,...pool];
+    const picked=shuffle(src).slice(0,24);
+    const grid=[];
+    for(let i=0;i<25;i++) grid.push(i===12?{label:'FREE',col:'FREE',num:-1}:picked[i<12?i:i-1]);
+    return grid;
+  }
+}
+
+/* ── Build empty card for manual entry ── */
+function buildEmptyCard(){
+  const grid=[];
+  BINGO_COLS.forEach(col=>{
+    for(let r=0;r<5;r++) grid.push({label:'',col,num:0});
+  });
+  // Transpose so grid is row-major B0..B4, I0..I4 …
+  const transposed=[];
+  for(let r=0;r<5;r++) for(let c=0;c<5;c++) transposed.push(grid[c*5+r]);
+  transposed[12]={label:'FREE',col:'FREE',num:-1};
+  return transposed;
+}
+
+/* ── Check and highlight duplicates across all filled cells ── */
+function checkDuplicates(){
+  // Build a map: num → [indices]
+  const numToIdxs = {};
+  for(let idx=0;idx<25;idx++){
+    const cell=pState.card[idx];
+    if(cell.label==='FREE'||cell.num<=0) continue;
+    if(!numToIdxs[cell.num]) numToIdxs[cell.num]=[];
+    numToIdxs[cell.num].push(idx);
+  }
+  // Mark cells as error if their number appears more than once
+  PDOM.card.querySelectorAll('.editable:not(.free)').forEach(div=>{
+    const idx=parseInt(div.dataset.idx);
+    const cell=pState.card[idx];
+    if(cell.num<=0){div.classList.remove('error');return;}
+    const isDup = numToIdxs[cell.num] && numToIdxs[cell.num].length > 1;
+    div.classList.toggle('error', isDup);
+  });
+}
+
+/* ── Render editable card ── */
+function renderEditableCard(){
+  PDOM.card.innerHTML='';
+  PDOM.card.classList.remove('words-mode');
+  pState.card.forEach((cell,idx)=>{
+    const div=document.createElement('div');
+    div.className='bingo-cell editable'; div.dataset.idx=idx;
+    if(cell.label==='FREE'){div.classList.add('free');div.textContent='FREE';PDOM.card.appendChild(div);return;}
+    const input=document.createElement('input');
+    input.type='number'; input.min='1'; input.max='75';
+    input.className='cell-input'; input.dataset.idx=idx;
+    input.value=cell.num>0?cell.num:'';
+    input.placeholder=getColHint(cell.col);
+    if(cell.num>0) div.classList.add('filled');
+    input.addEventListener('input',()=>{
+      const v=parseInt(input.value)||0;
+      const[lo,hi]=COL_RANGES[cell.col];
+      div.classList.toggle('filled',v>0);
+      // Range error takes priority; duplicate check runs across all cells
+      const outOfRange = v>0 && (v<lo||v>hi);
+      div.classList.toggle('error', outOfRange);
+      pState.card[idx]={...pState.card[idx],label:v>0?String(v):'',num:v>0?v:0};
+      if(!outOfRange) checkDuplicates();
+      saveSession();
+    });
+    div.appendChild(input); PDOM.card.appendChild(div);
+  });
+  // Run duplicate check on re-render if card already has values
+  checkDuplicates();
+}
+function getColHint(col){const[lo,hi]=COL_RANGES[col]||[1,75];return `${lo}‑${hi}`;}
+
+/* ── Render play card (read-only, marks) ── */
+function renderPlayCard(){
+  PDOM.card.innerHTML='';
+  const isWords=pState.mode==='words';
+  PDOM.card.classList.toggle('words-mode',isWords);
+  pState.card.forEach((cell,idx)=>{
+    const div=document.createElement('div');
+    div.className='bingo-cell'; div.dataset.idx=idx;
+    if(cell.label==='FREE'){div.classList.add('free','marked');div.textContent='FREE';}
+    else{div.textContent=cell.label; if(pState.marked.has(idx))div.classList.add('marked');}
+    PDOM.card.appendChild(div);
+  });
+  // Highlight win cells
+  const win=checkWin();
+  if(win.length) win.forEach(i=>{const c=PDOM.card.querySelector(`[data-idx="${i}"]`);if(c)c.classList.add('winning');});
+}
+
+/* ── Win check ── */
+function checkWin(){
+  const m=idx=>idx===12||pState.marked.has(idx);
+  const rows=[[0,1,2,3,4],[5,6,7,8,9],[10,11,12,13,14],[15,16,17,18,19],[20,21,22,23,24]];
+  const cols=[[0,5,10,15,20],[1,6,11,16,21],[2,7,12,17,22],[3,8,13,18,23],[4,9,14,19,24]];
+  const d1=[0,6,12,18,24],d2=[4,8,12,16,20];
+  const frame=[0,1,2,3,4,5,9,10,14,15,19,20,21,22,23,24];
+  const all=Array.from({length:25},(_,i)=>i);
+  const p=pState.pattern;
+  if(p==='line'){for(const l of[...rows,...cols,d1,d2])if(l.every(m))return l;return[];}
+  if(p==='x'){return(d1.every(m)&&d2.every(m))?[...new Set([...d1,...d2])]:[]; }
+  if(p==='frame')return frame.every(m)?frame:[];
+  if(p==='blackout')return all.every(m)?all:[];
+  return[];
+}
+
+/* ── Mark a called item on card ── */
+function markItem(item){
+  pState.card.forEach((cell,idx)=>{
+    if(cell.label==='FREE') return;
+    const match = pState.mode==='numbers'? cell.num===item.num : cell.label===item.label;
+    if(match) pState.marked.add(idx);
+  });
+}
+
+/* ── Called strip ── */
+function addToStrip(item){
+  const ball=document.createElement('div');
+  ball.className='strip-ball'; ball.dataset.col=item.col;
+  ball.textContent=pState.mode==='numbers'?item.num:'★';
+  ball.title=item.label;
+  PDOM.calledStrip.prepend(ball);
+}
+function updateLastBall(item){
+  if(!item) return;
+  PDOM.bigBallCol.textContent=pState.mode==='numbers'?item.col:'🎁';
+  PDOM.bigBallNum.textContent=pState.mode==='numbers'?item.num:'★';
+  PDOM.bigBallLabel.textContent=item.label;
+  PDOM.bigBall.classList.remove('pop'); void PDOM.bigBall.offsetWidth; PDOM.bigBall.classList.add('pop');
+}
+
+/* ── Validate numbers card before lock-in ── */
+function validateNumbersCard(){
+  const errors=[];
+  const usedNums=new Map();
+  for(let idx=0;idx<25;idx++){
+    const cell=pState.card[idx];
+    if(cell.label==='FREE') continue;
+    const[lo,hi]=COL_RANGES[cell.col];
+    if(!cell.num||cell.num<1){errors.push(`Column ${cell.col} has an empty cell`);continue;}
+    if(cell.num<lo||cell.num>hi){errors.push(`${cell.num} is out of range for column ${cell.col} (${lo}–${hi})`);continue;}
+    if(usedNums.has(cell.num)){errors.push(`Number ${cell.num} is used more than once`);}
+    else usedNums.set(cell.num,idx);
+  }
+  return errors;
+}
+
+/* ── Lock in ── */
+function lockIn(){
+  if(pState.mode==='numbers'){
+    const errs=validateNumbersCard();
+    if(errs.length){showSetupError(errs[0]);return;}
+  }
+  pState.locked=true;
+  saveSession();
+  PDOM.setupControls.classList.add('hidden');
+  PDOM.lockedNotice.classList.remove('hidden');
+  PDOM.waitingBanner.classList.remove('hidden');
+  setPhase('locked','Waiting for host…');
+  // Broadcast / Firebase
+  if(pState.broadcastCh) pState.broadcastCh.postMessage({type:'PLAYER_LOCK',player:{id:pState.playerId,name:pState.playerName,card:pState.card,locked:true}});
+  if(pState.db) fbSavePlayer({locked:true, card:pState.card});
+}
+
+/* ── Firebase helpers (async) ── */
+async function initFirebase(){
+  if(!window.FIREBASE_ENABLED) return false;
+  try{
+    const{initializeApp}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+    const{getDatabase,ref,set,push,onValue,update}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+    const app=initializeApp(window.FIREBASE_CONFIG);
+    pState.db=getDatabase(app);
+    window._pfbRef=ref; window._pfbSet=set; window._pfbOnValue=onValue; window._pfbUpdate=update;
+    return true;
+  }catch(e){console.warn('Firebase init failed:',e);return false;}
+}
+function fbSavePlayer(extraFields={}){
+  if(!pState.db) return;
+  window._pfbUpdate(window._pfbRef(pState.db,`rooms/${pState.roomId}/players/${pState.playerId}`),{name:pState.playerName,...extraFields});
+}
+function fbListenCalled(){
+  if(!pState.db) return;
+  window._pfbOnValue(window._pfbRef(pState.db,`rooms/${pState.roomId}/called`),snap=>{
+    const data=snap.val();
+    if(!data) return;
+    const items=typeof data==='object'&&!Array.isArray(data)?Object.values(data):data;
+    const newItems=items.slice(pState.called.length);
+    newItems.forEach(item=>onNewBallCalled(item));
+  });
+}
+function fbListenMeta(){
+  if(!pState.db) return;
+  window._pfbOnValue(window._pfbRef(pState.db,`rooms/${pState.roomId}/meta`),snap=>{
+    const meta=snap.val(); if(!meta) return;
+    if(meta.active&&!pState.gameActive) startGamePhase(meta);
+    if(meta.pattern) pState.pattern=meta.pattern;
+  });
+}
+
+/* ── BroadcastChannel (same-browser offline) ── */
+function setupBroadcastCh(roomId){
+  pState.broadcastCh=new BroadcastChannel(`bingo-room-${roomId}`);
+  pState.broadcastCh.onmessage=e=>{
+    const{type,item,pool,mode,pattern,targetId}=e.data;
+    if(type==='BALL_DRAWN') onNewBallCalled(item);
+    if(type==='GAME_START') startGamePhase({pool,mode:mode||'numbers',pattern:pattern||'line'});
+    if(type==='GAME_RESET') window.location.reload();
+    if(type==='PLAYER_KICK' && targetId===pState.playerId){
+      clearSession();
+      PDOM.playerApp.classList.add('hidden');
+      PDOM.joinScreen.classList.remove('hidden');
+      PDOM.joinScreen.querySelector('h1').textContent='Removed from Room';
+      document.getElementById('room-id-label').textContent='The host removed you from the room.';
+      document.getElementById('join-subtitle').textContent='Ask the host for a new invite if this was a mistake.';
+      PDOM.joinScreen.querySelector('.name-input-row').style.display='none';
+    }
+  };
+}
+
+/* ── Handle new ball ── */
+function onNewBallCalled(item){
+  if(!item) return;
+  pState.called.push(item);
+  markItem(item);
+  updateLastBall(item);
+  addToStrip(item);
+  PDOM.calledProgress.textContent=`${pState.called.length} called`;
+  renderPlayCard();
+  saveSession();
+}
+
+/* ── Transition to game phase ── */
+function startGamePhase(meta){
+  pState.gameActive=true;
+  pState.mode=meta.mode||'numbers';
+  pState.pool=meta.pool||[];
+  pState.pattern=meta.pattern||'line';
+  setPhase('active','Game in progress!');
+  PDOM.waitingBanner.classList.add('hidden');
+  PDOM.lockedNotice.classList.add('hidden');
+  PDOM.setupControls.classList.add('hidden');
+  PDOM.gamePhase.classList.remove('hidden');
+  renderPlayCard();
+  saveSession();
+  // If Firebase, listen to called
+  if(pState.db) fbListenCalled();
+}
+
+/* ── Phase UI ── */
+function setPhase(type,text){
+  PDOM.phaseLabel.textContent=type==='active'?'Game Live':type==='locked'?'Locked In':'Setup';
+  PDOM.phaseStatus.className=`phase-status ${type}`;
+  PDOM.phaseStatus.textContent=text;
+}
+
+/* ── Show error ── */
+function showSetupError(msg){
+  PDOM.setupError.textContent=msg; PDOM.setupError.classList.remove('hidden');
+  setTimeout(()=>PDOM.setupError.classList.add('hidden'),3500);
+}
+
+/* ── Request join via BroadcastChannel (async handshake for name check) ── */
+function requestJoinBC(name, playerId, roomId){
+  return new Promise((resolve, reject)=>{
+    const ch=new BroadcastChannel(`bingo-room-${roomId}`);
+    // If no host responds within 800ms, auto-accept (solo / no host yet)
+    const timer=setTimeout(()=>{ ch.close(); resolve(); }, 800);
+    ch.onmessage=e=>{
+      const{type,targetId,reason}=e.data;
+      if(targetId!==playerId) return;
+      clearTimeout(timer); ch.close();
+      if(type==='JOIN_ACCEPTED') resolve();
+      if(type==='JOIN_REJECTED') reject(reason||'Name already taken');
+    };
+    ch.postMessage({type:'PLAYER_JOIN',player:{id:playerId,name,locked:false}});
+  });
+}
+
+/* ── Show player app after successful join ── */
+function showPlayerApp(){
+  PDOM.joinScreen.classList.add('hidden');
+  PDOM.playerApp.classList.remove('hidden');
+  PDOM.playerRoomBadge.textContent=`Room ${pState.roomId}`;
+  pState.card=buildEmptyCard();
+  setPhase('setup','Fill in or randomize your card');
+  renderEditableCard();
+  saveSession();
+}
+
+/* ── Fetch authoritative state from host via BroadcastChannel (temp channel) ── */
+function requestStateFromHost(playerId, playerName, roomId, timeout){
+  return new Promise((resolve, reject)=>{
+    const ch=new BroadcastChannel(`bingo-room-${roomId}`);
+    const timer=setTimeout(()=>{ ch.close(); reject(new Error('timeout')); }, timeout);
+    ch.onmessage=e=>{
+      const{type,targetId}=e.data;
+      if(type==='PLAYER_STATE' && targetId===playerId){
+        clearTimeout(timer); ch.close(); resolve(e.data);
+      }
+    };
+    ch.postMessage({type:'REQUEST_STATE', playerId, playerName});
+  });
+}
+
+/* ── Render the appropriate UI after state is restored ── */
+function renderRestoredUI(){
+  if(pState.gameActive){
+    setPhase('active','Game in progress!');
+    PDOM.setupControls.classList.add('hidden');
+    PDOM.gamePhase.classList.remove('hidden');
+    renderPlayCard();
+    pState.called.forEach(item=>addToStrip(item));
+    PDOM.calledProgress.textContent=`${pState.called.length} called`;
+    if(pState.called.length) updateLastBall(pState.called[pState.called.length-1]);
+  } else if(pState.locked){
+    setPhase('locked','Waiting for host…');
+    PDOM.setupControls.classList.add('hidden');
+    PDOM.lockedNotice.classList.remove('hidden');
+    PDOM.waitingBanner.classList.remove('hidden');
+    renderPlayCard();
+    setTimeout(()=>{
+      if(pState.broadcastCh) pState.broadcastCh.postMessage({type:'PLAYER_LOCK',player:{id:pState.playerId,name:pState.playerName,card:pState.card,locked:true}});
+    },300);
+  } else {
+    setPhase('setup','Fill in or randomize your card');
+    renderEditableCard();
+    setTimeout(()=>{
+      if(pState.broadcastCh) pState.broadcastCh.postMessage({type:'PLAYER_REJOIN',player:{id:pState.playerId,name:pState.playerName,locked:false}});
+    },300);
+  }
+}
+
+/* ── Restore session ──
+   1. Query host for authoritative state (REQUEST_STATE)
+   2. If host responds → use host data (card, called, lock)
+   3. If host offline (1s timeout) → fall back to localStorage snapshot
+*/
+async function restoreSession(saved){
+  pState.playerId=saved.playerId;
+  pState.playerName=saved.playerName;
+
+  // Try host first (authoritative)
+  let fromHost=false;
+  try{
+    const hs=await requestStateFromHost(saved.playerId, saved.playerName, pState.roomId, 1000);
+    const p=hs.playerData||{};
+    pState.card=(p.card&&p.card.length===25)?p.card:saved.card;
+    pState.locked=!!p.locked;
+    pState.called=hs.called||[];
+    pState.gameActive=!!hs.gameActive;
+    pState.mode=hs.mode||'numbers';
+    pState.pool=hs.pool||[];
+    pState.pattern=hs.pattern||'line';
+    // Re-compute marks from the authoritative called list
+    pState.marked=new Set([12]);
+    pState.called.forEach(item=>markItem(item));
+    fromHost=true;
+  }catch(e){
+    // Host offline or no response — use localStorage snapshot
+    pState.card=saved.card;
+    pState.locked=saved.locked;
+    pState.marked=new Set(saved.marked);
+    pState.called=saved.called||[];
+    pState.gameActive=saved.gameActive;
+  }
+
+  // Connect ongoing broadcast channel (after temp query channel is closed)
+  setupBroadcastCh(pState.roomId);
+
+  // Show app
+  PDOM.joinScreen.classList.add('hidden');
+  PDOM.playerApp.classList.remove('hidden');
+  PDOM.playerRoomBadge.textContent=`Room ${pState.roomId}`;
+
+  renderRestoredUI();
+  console.log(`[restore] source: ${fromHost?'host':'localStorage'}`);
+}
+
+/* ── Join game ── */
+async function joinGame(name){
+  pState.playerName=name; pState.playerId=genId(10);
+  let useFirebase=false;
+  if(window.FIREBASE_ENABLED){ useFirebase=await initFirebase(); }
+  if(!useFirebase){
+    // Handshake: request join and wait for host accept/reject
+    try{ await requestJoinBC(name, pState.playerId, pState.roomId); }
+    catch(reason){
+      PDOM.joinError.textContent=String(reason);
+      PDOM.joinError.classList.remove('hidden');
+      PDOM.btnJoin.textContent='Join →'; PDOM.btnJoin.disabled=false;
+      pState.playerName=null; pState.playerId=null;
+      return;
+    }
+    setupBroadcastCh(pState.roomId);
+  } else {
+    fbSavePlayer({locked:false,hasBingo:false});
+    fbListenMeta();
+  }
+  showPlayerApp();
+}
+
+/* ── Restore session from localStorage ── */
+function restoreSession(saved){
+  pState.playerId=saved.playerId; pState.playerName=saved.playerName;
+  pState.card=saved.card; pState.locked=saved.locked;
+  pState.marked=new Set(saved.marked); pState.called=saved.called||[];
+  pState.gameActive=saved.gameActive;
+  // Re-connect broadcast channel
+  setupBroadcastCh(pState.roomId);
+  // Show app
+  PDOM.joinScreen.classList.add('hidden');
+  PDOM.playerApp.classList.remove('hidden');
+  PDOM.playerRoomBadge.textContent=`Room ${pState.roomId}`;
+  if(pState.gameActive){
+    setPhase('active','Game in progress!');
+    PDOM.gamePhase.classList.remove('hidden');
+    renderPlayCard();
+    // Replay called strip
+    pState.called.forEach(item=>addToStrip(item));
+    PDOM.calledProgress.textContent=`${pState.called.length} called`;
+    if(pState.called.length) updateLastBall(pState.called[pState.called.length-1]);
+  } else if(pState.locked){
+    setPhase('locked','Waiting for host…');
+    renderPlayCard();
+    PDOM.lockedNotice.classList.remove('hidden');
+    PDOM.waitingBanner.classList.remove('hidden');
+    // Re-announce lock to host
+    setTimeout(()=>{
+      if(pState.broadcastCh) pState.broadcastCh.postMessage({type:'PLAYER_LOCK',player:{id:pState.playerId,name:pState.playerName,card:pState.card,locked:true}});
+    },300);
+  } else {
+    setPhase('setup','Fill in or randomize your card');
+    renderEditableCard();
+    // Re-announce presence (triggers JOIN_ACCEPTED check on host)
+    setTimeout(()=>{
+      if(pState.broadcastCh) pState.broadcastCh.postMessage({type:'PLAYER_REJOIN',player:{id:pState.playerId,name:pState.playerName,locked:false}});
+    },300);
+  }
+}
+
+/* ── Apply theme (from themes.js) ── */
+document.addEventListener('themechange',e=>{pState.currentTheme=e.detail;});
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded',()=>{
+  populateThemePicker();
+  pState.currentTheme=getThemeById('cny');
+
+  const roomId=getRoomId();
+  if(!roomId){
+    PDOM.joinScreen.querySelector('h1').textContent='Invalid Link';
+    document.getElementById('room-id-label').textContent='No room ID found in the URL.';
+    document.getElementById('join-subtitle').textContent='Ask your host for the correct link.';
+    PDOM.joinScreen.querySelector('.name-input-row').style.display='none';
+    PDOM.joinError.classList.add('hidden');
+    return;
+  }
+  pState.roomId=roomId;
+  PDOM.joinRoomId.textContent=roomId;
+
+  // ── Wire ALL action buttons (always needed, even on session restore) ──
+  const fillEmptyBtn=document.getElementById('btn-fill-empty');
+  if(fillEmptyBtn) fillEmptyBtn.addEventListener('click',()=>{
+    BINGO_COLS.forEach((col,c)=>{
+      const[lo,hi]=COL_RANGES[col];
+      const colIndices=[c,c+5,c+10,c+15,c+20].filter(i=>i!==12);
+      const taken=new Set(colIndices.map(i=>pState.card[i].num).filter(n=>n>0));
+      const empty=colIndices.filter(i=>pState.card[i].num<=0);
+      let avail=[]; for(let n=lo;n<=hi;n++) if(!taken.has(n)) avail.push(n);
+      avail=shuffle(avail);
+      empty.forEach((cellIdx,j)=>{ if(j<avail.length){ const n=avail[j]; pState.card[cellIdx]={...pState.card[cellIdx],label:String(n),num:n}; } });
+    });
+    renderEditableCard(); saveSession();
+  });
+  PDOM.btnRandomize.addEventListener('click',()=>{
+    pState.card=generateCard(pState.pool.length?pState.pool:null,pState.mode);
+    renderEditableCard(); saveSession();
+  });
+  PDOM.btnLockIn.addEventListener('click',lockIn);
+  PDOM.btnShoutBingo.addEventListener('click',()=>{
+    const win=checkWin();
+    if(!win.length){ PDOM.btnShoutBingo.style.animation='shake 0.4s ease'; setTimeout(()=>PDOM.btnShoutBingo.style.animation='',500); return; }
+    launchConfetti(pState.currentTheme);
+    PDOM.winModal.classList.remove('hidden');
+    const last=pState.called[pState.called.length-1];
+    PDOM.winPrize.textContent=last?`Last called: ${last.label}`:'';
+    if(pState.broadcastCh) pState.broadcastCh.postMessage({type:'PLAYER_BINGO',player:{id:pState.playerId,name:pState.playerName}});
+    if(pState.db) window._pfbUpdate(window._pfbRef(pState.db,`rooms/${pState.roomId}/players/${pState.playerId}`),{hasBingo:true});
+  });
+  PDOM.btnDismissWin.addEventListener('click',()=>PDOM.winModal.classList.add('hidden'));
+
+  // ── Check for saved session (survives refresh for 6 hours) ──
+  try{
+    const raw=localStorage.getItem(`bingo_p_${roomId}`);
+    if(raw){
+      const saved=JSON.parse(raw);
+      if(saved.v===2 && Date.now()-saved.ts < 6*3600*1000){
+        restoreSession(saved);
+        return;  // skip join screen
+      } else {
+        localStorage.removeItem(`bingo_p_${roomId}`);
+      }
+    }
+  }catch(e){}
+
+  // ── Normal join flow ──
+  PDOM.btnJoin.addEventListener('click',async()=>{
+    const name=PDOM.inputName.value.trim();
+    if(!name){ PDOM.joinError.textContent='Please enter your name'; PDOM.joinError.classList.remove('hidden'); return; }
+    PDOM.joinError.classList.add('hidden'); PDOM.btnJoin.textContent='Joining…'; PDOM.btnJoin.disabled=true;
+    await joinGame(name);
+  });
+  PDOM.inputName.addEventListener('keydown',e=>{if(e.key==='Enter')PDOM.btnJoin.click();});
+});
+</script>
+</body>
+</html>
