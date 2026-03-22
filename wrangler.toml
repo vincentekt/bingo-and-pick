@@ -1,6 +1,5 @@
 name            = "bingo-and-pick"
 pages_build_output_dir = "."
-account_id      = "095141e5cf43b7a0ff421b37aaeb75b7"
 
 [vars]
 ENVIRONMENT = "production"

@@ -596,11 +596,26 @@ async function onStartGame(){
 }
 
 /* ════════════════════════════════════════════════════════════════
-   BROADCAST CHANNEL  (same-browser demo without Firebase)
+   Networking (Socket.IO Relay)
 ════════════════════════════════════════════════════════════════ */
+const SOCKET_URL = 'https://bingo-backend-relay.azurewebsites.net';
+function createSocketChannel(roomId) {
+  if(!window.io) return new BroadcastChannel(`bingo-room-${roomId}`);
+  const socket = io(SOCKET_URL);
+  socket.emit('join-room', roomId);
+  const ch = {
+    postMessage: (data) => socket.emit('relay', roomId, data),
+    close: () => socket.disconnect()
+  };
+  socket.on('relay', (data) => {
+    if (ch.onmessage) ch.onmessage({ data });
+  });
+  return ch;
+}
+
 let broadcastCh = null;
 function setupBroadcastChannel(roomId){
-  broadcastCh = new BroadcastChannel(`bingo-room-${roomId}`);
+  broadcastCh = createSocketChannel(roomId);
   broadcastCh.onmessage = e => {
     const { type, player } = e.data;
     if(type === 'PLAYER_JOIN'){
